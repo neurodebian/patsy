@@ -44,12 +44,10 @@ override_dh_auto_install: $(PYVERS:%=python-install%) $(PY3VERS:%=python-install
                           ${PYVERS:%=python-test%}    ${PY3VERS:%=python-test%}
 	: # nothing more to do
 
-#override_dh_clean:
-#	rm -rf build doc/_build *-stamp
-#	dh_clean
-#	: # prune auto-generated version.py -- will be generated during build again
-#	rm -f patsy/version.py
-#
+override_dh_clean:
+	rm -rf build *.egg-info
+	dh_clean
+
 python-test%: python-install%
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	echo "backend : Agg" >| $(CURDIR)/build/matplotlibrc
@@ -75,6 +73,7 @@ else
 	 make -C doc html
 	: # Use jquery from Debian package, so prune shipped one
 	-rm doc/_build/html/_static/jquery.js
+    -rm doc/_build/html/_static/underscore.js
 	dh_installdocs
 endif
 endif

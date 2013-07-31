@@ -1,0 +1,9 @@
+Document: python-patsy
+Title: patsy - statistical models in Python using symbolic formulas
+Author: Nathaniel J. Smith
+Abstract: Documentation and examples for patsy
+Section: Science/Data Analysis
+
+Format: HTML
+Index: /usr/share/doc/python-patsy-doc/html/index.html
+Files: /usr/share/doc/python-patsy-doc/html/*

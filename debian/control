@@ -15,7 +15,7 @@ Build-Depends: debhelper (>= 7.0.50),
                python-matplotlib,
 X-Python-Version: >= 2.6
 X-Python3-Version: >= 3.2
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Homepage: http://github.com/pydata/patsy
 Vcs-Browser: http://github.com/neurodebian/patsy
 Vcs-Git: git://github.com/neurodebian/patsy.git
@@ -50,7 +50,7 @@ Description: statistical models in Python using symbolic formulas
 Package: python-patsy-doc
 Architecture: all
 Section: doc
-Depends: ${misc:Depends}, libjs-jquery
+Depends: ${misc:Depends}, libjs-jquery, libjs-underscore
 Suggests: python-patsy
 Description: documentation and examples for patsy
  This package contains documentation and example scripts for
