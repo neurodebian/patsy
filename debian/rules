@@ -1,6 +1,8 @@
 #!/usr/bin/make -f
 # -*- mode: makefile; coding: utf-8 -*-
 
+export DH_VERBOSE=1
+
 PACKAGE2_NAME = python-patsy
 PACKAGE3_NAME = python3-patsy
 PACKAGE2_ROOT_DIR = debian/${PACKAGE2_NAME}
@@ -28,34 +30,38 @@ EXCLUDE_TESTS3.3 :=
 	: # Explicit build system to avoid use of all-in-1 Makefile
 	dh $@ --buildsystem=python_distutils --with python2,python3
 
+python-build%:
+	python$* setup.py build
+
+override_dh_auto_build: $(PY3VERS:%=python-build%)
+	dh_auto_build
+
+python-install%:
+	python$* setup.py install --root=$(CURDIR)/debian/tmp \
+		--force --install-layout=deb
+
+override_dh_auto_install: $(PYVERS:%=python-install%) $(PY3VERS:%=python-install%) \
+                          ${PYVERS:%=python-test%}    ${PY3VERS:%=python-test%}
+	: # nothing more to do
+
 #override_dh_clean:
 #	rm -rf build doc/_build *-stamp
 #	dh_clean
 #	: # prune auto-generated version.py -- will be generated during build again
 #	rm -f patsy/version.py
 #
-#override_dh_auto_build:
-#	# Override default build operation which --force's re-cythonization
-#	# on elderly ubuntus
-#	:
-#
-#override_dh_auto_install: ${PYVERS:%=python-install%} ${PY3VERS:%=python-install%} ${PYVERS:%=python-test%} ${PY3VERS:%=python-test%}
-## Per Python version logic -- install, test, remomove .so (installed into -lib)
-#python-install%: _uncythonize%
-#	python$* setup.py install --install-layout=deb --root=$(CURDIR)/debian/tmp
-#
-#python-test%: python-install%
-#ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
-#	echo "backend : Agg" >| $(CURDIR)/build/matplotlibrc
-#	: # Run unittests here against installed patsy
-#	echo "$*" | grep -q '^3' && PY=3 || PY=$*; \
-#	export PYTHONPATH=`/bin/ls -d $$PWD/debian/tmp/usr/lib/python$$PY/*/`; \
-#	export MPLCONFIGDIR=$(CURDIR)/build HOME=$(CURDIR)/build; \
-#	python$* ci/print_versions.py; \
-#    cd build/; python$* /usr/bin/nosetests -s -v -a '!network' $(EXCLUDE_TESTS$*) patsy;
-#else
-#	: # Skip unittests due to nocheck
-#endif
+python-test%: python-install%
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	echo "backend : Agg" >| $(CURDIR)/build/matplotlibrc
+	: # Run unittests here against installed patsy
+	echo "$*" | grep -q '^3' && PY=3 || PY=$*; \
+	export PYTHONPATH=`/bin/ls -d $$PWD/debian/tmp/usr/lib/python$$PY/*/`; \
+	export MPLCONFIGDIR=$(CURDIR)/build HOME=$(CURDIR)/build; \
+    mkdir -p build/tmp; cd build/tmp; \
+    python$* /usr/bin/nosetests -s -v $(EXCLUDE_TESTS$*) patsy;
+else
+	: # Skip unittests due to nocheck
+endif
 
 override_dh_installdocs:
 	: # Build Documentation using installed patsy
@@ -67,27 +73,11 @@ else
 	export PYTHONPATH=`/bin/ls -d $$PWD/$(PACKAGE2_ROOT_DIR)/usr/lib/python$(PYVER)/*`; \
 	export MPLCONFIGDIR=$(CURDIR)/build HOME=$(CURDIR)/build; \
 	 make -C doc html
-endif
-endif
 	: # Use jquery from Debian package, so prune shipped one
-	#TODO -rm doc/_build/html/_static/jquery.js
-	dh_installdocs -A *.rst
-
-#override_dh_installchangelogs:
-#	dh_installchangelogs doc/whats_new.rst
-
-# ## remove .so libraries from main package, and call dh_numpy*
-# ## while removing 2 if not present
-# _dh_python%:
-# 	if [ -d debian/$(PACKAGE$*_NAME)/usr/lib ]; then \
-# 	   find debian/$(PACKAGE$*_NAME)/usr/lib -name "*.so" -delete; \
-# 	fi
-# 	[ -e /usr/bin/dh_numpy$(*:2=) ] && dh_numpy$(*:2=) -p$(PACKAGE$*_NAME)-lib || :
-# 	dh_python$*
-# 
-# ## "Instantiate" both rules so dh sees them
-# override_dh_python2: _dh_python2
-# override_dh_python3: _dh_python3
+	-rm doc/_build/html/_static/jquery.js
+	dh_installdocs
+endif
+endif
 
 ## immediately useable documentation and exemplar scripts/data
 override_dh_compress:
