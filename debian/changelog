@@ -1,0 +1,5 @@
+patsy (0.1.0+git60-g7ddb7f3-1~pre1) unstable; urgency=low
+
+  * Initial Debian package (Closes: #XXX)
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Wed, 31 Jul 2013 11:22:09 -0400

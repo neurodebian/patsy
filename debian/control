@@ -1,0 +1,57 @@
+Source: patsy
+Section: python
+Priority: optional
+Maintainer: NeuroDebian Team <team@neuro.debian.net>
+Uploaders: Yaroslav Halchenko <debian@onerussian.com>, Michael Hanke <michael.hanke@gmail.com>
+Build-Depends: debhelper (>= 7.0.50),
+               python-all (>= 2.5),
+               python-setuptools,
+               python-numpy,
+               python-pandas,
+               python3-all,
+               python3-setuptools,
+               python3-numpy,
+               python3-pandas,
+               python-matplotlib,
+X-Python-Version: >= 2.6
+X-Python3-Version: >= 3.2
+Standards-Version: 3.9.3
+Homepage: http://github.com/pydata/patsy
+Vcs-Browser: http://github.com/neurodebian/patsy
+Vcs-Git: git://github.com/neurodebian/patsy.git
+XS-Testsuite: autopkgtest
+
+Package: python-patsy
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends},
+         python-numpy,
+Recommends: python-pandas,
+Suggests: python-patsy-doc
+Description: statistical models in Python using symbolic formulas
+ patsy is a Python library for describing statistical models
+ (especially linear models, or models that have a linear component)
+ and building design matrices.
+ .
+ This package contains the Python 2 version.
+
+Package: python3-patsy
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+         python3-numpy,
+Recommends: python3-pandas,
+Suggests: python-patsy-doc
+Description: statistical models in Python using symbolic formulas
+ patsy is a Python library for describing statistical models
+ (especially linear models, or models that have a linear component)
+ and building design matrices.
+ .
+ This package contains the Python 3 version.
+
+Package: python-patsy-doc
+Architecture: all
+Section: doc
+Depends: ${misc:Depends}, libjs-jquery
+Suggests: python-patsy
+Description: documentation and examples for patsy
+ This package contains documentation and example scripts for
+ python-patsy.

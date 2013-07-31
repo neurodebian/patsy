@@ -1,0 +1,3 @@
+version=3
+opts="dversionmangle=s/.dfsg$//,uversionmangle=s/v//,filenamemangle=s/.*\/(.*)/patsy-$1\.tar\.gz/" \
+ http://github.com/pydata/patsy/tags .*archive/v?([\d\.rc]+).tar.gz

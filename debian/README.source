@@ -1,0 +1,8 @@
+patsy for Debian
+----------------
+
+For flexibility and easier interaction with upstream, packaging VCS is
+done on top of upstream's GIT hosted on github:
+git://github.com/pydata/patsy.git
+
+ -- Yaroslav Halchenko <debian@onerussian.com>, Wed, 31 Jul 2013 11:21:04 -0400
