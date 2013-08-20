@@ -3,8 +3,11 @@ patsy (0.2.1-1) unstable; urgency=low
   * Fresh upstream release
   * debian/rules:
     - export bogus http_proxy to safe-guard against downloads
+  * debian/patches
+    - cherry-pick eab795ce8dd2f0731d1b6764874a101c616d9311 from upstream
+      to pass tests on wheezy using python2.6 where pandas is N/A
 
- -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 20 Aug 2013 12:11:40 -0400
+ -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 20 Aug 2013 14:03:29 -0400
 
 patsy (0.1.0+git60-g7ddb7f3-1) unstable; urgency=low
 
