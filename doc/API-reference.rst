@@ -142,9 +142,6 @@ Patsy comes with a number of :ref:`stateful transforms
 
    An alias for :func:`standardize`, for R compatibility.
 
-The :func:`C` function documented elsewhere is also a stateful
-transform.
-
 Finally, this is not itself a stateful transform, but it's useful if
 you want to define your own:
 
@@ -163,8 +160,13 @@ Handling categorical data
 
 .. autoclass:: ContrastMatrix
 
-Working with formulas
----------------------
+Spline regression
+-----------------
+
+.. autofunction:: bs
+
+Working with formulas programmatically
+--------------------------------------
 
 .. autoclass:: Term
 
@@ -197,13 +199,15 @@ Building design matrices
    This is an opaque class that represents Patsy's knowledge about
    how to build a design matrix. You get these objects from
    :func:`design_matrix_builders`, and you pass them to
-   :func:`build_design_matrices`. It has only one public attribute:
+   :func:`build_design_matrices`.
 
    .. attribute:: design_info
 
       This attribute gives metadata about the matrices that this
       builder object can produce, in the form of a :class:`DesignInfo`
       object.
+
+   .. automethod:: subset
 
 .. autofunction:: build_design_matrices
 

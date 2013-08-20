@@ -19,6 +19,7 @@ from patsy.util import (atleast_2d_column_default,
 from patsy.design_info import DesignMatrix, DesignInfo
 from patsy.redundancy import pick_contrasts_for_term
 from patsy.desc import ModelDesc
+from patsy.eval import EvalEnvironment
 from patsy.contrasts import code_contrast_matrix, Treatment
 from patsy.compat import itertools_product, OrderedDict
 from patsy.missing import NAAction
@@ -610,7 +611,7 @@ def _make_term_column_builders(terms,
                 column_builders.append(column_builder)
             term_to_column_builders[term] = column_builders
     return new_term_order, term_to_column_builders
-                        
+
 def design_matrix_builders(termlists, data_iter_maker, NA_action="drop"):
     """Construct several :class:`DesignMatrixBuilders` from termlists.
 
@@ -636,6 +637,9 @@ def design_matrix_builders(termlists, data_iter_maker, NA_action="drop"):
     transforms, pick column names, etc.
 
     See :ref:`formulas` for details.
+
+    .. versionadded:: 0.2.0
+       The ``NA_action`` argument.
     """
     if isinstance(NA_action, basestring):
         NA_action = NAAction(NA_action)
@@ -718,6 +722,83 @@ class DesignMatrixBuilder(object):
         return DesignInfo(self._column_names, self._term_slices,
                           builder=self)
 
+    def subset(self, which_terms):
+        """Create a new :class:`DesignMatrixBuilder` that includes only a
+        subset of the terms that this object does.
+
+        For example, if `builder` has terms `x`, `y`, and `z`, then::
+
+          builder2 = builder.subset(["x", "z"])
+
+        will return a new builder that will return design matrices with only
+        the columns corresponding to the terms `x` and `z`. After we do this,
+        then in general these two expressions will return the same thing (here
+        we assume that `x`, `y`, and `z` each generate a single column of the
+        output)::
+
+          build_design_matrix([builder], data)[0][:, [0, 2]]
+          build_design_matrix([builder2], data)[0]
+
+        However, a critical difference is that in the second case, `data` need
+        not contain any values for `y`. This is very useful when doing
+        prediction using a subset of a model, in which situation R usually
+        forces you to specify dummy values for `y`.
+
+        If using a formula to specify the terms to include, remember that like
+        any formula, the intercept term will be included by default, so use
+        `0` or `-1` in your formula if you want to avoid this.
+
+        :arg which_terms: The terms which should be kept in the new
+          :class:`DesignMatrixBuilder`. If this is a string, then it is parsed
+          as a formula, and then the names of the resulting terms are taken as
+          the terms to keep. If it is a list, then it can contain a mixture of
+          term names (as strings) and :class:`Term` objects.
+
+        .. versionadded: 0.2.0
+        """
+        factor_to_evaluators = {}
+        for evaluator in self._evaluators:
+            factor_to_evaluators[evaluator.factor] = evaluator
+        design_info = self.design_info
+        term_name_to_term = dict(zip(design_info.term_names,
+                                     design_info.terms))
+        if isinstance(which_terms, basestring):
+            # We don't use this EvalEnvironment -- all we want to do is to
+            # find matching terms, and we can't do that use == on Term
+            # objects, because that calls == on factor objects, which in turn
+            # compares EvalEnvironments. So all we do with the parsed formula
+            # is pull out the term *names*, which the EvalEnvironment doesn't
+            # effect. This is just a placeholder then to allow the ModelDesc
+            # to be created:
+            env = EvalEnvironment({})
+            desc = ModelDesc.from_formula(which_terms, env)
+            if desc.lhs_termlist:
+                raise PatsyError("right-hand-side-only formula required")
+            which_terms = [term.name() for term in desc.rhs_termlist]
+        terms = []
+        evaluators = set()
+        term_to_column_builders = {}
+        for term_or_name in which_terms:
+            if isinstance(term_or_name, basestring):
+                if term_or_name not in term_name_to_term:
+                    raise PatsyError("requested term %r not found in "
+                                     "this DesignMatrixBuilder"
+                                     % (term_or_name,))
+                term = term_name_to_term[term_or_name]
+            else:
+                term = term_or_name
+            if term not in self._termlist:
+                raise PatsyError("requested term '%s' not found in this "
+                                 "DesignMatrixBuilder" % (term,))
+            for factor in term.factors:
+                evaluators.add(factor_to_evaluators[factor])
+            terms.append(term)
+            column_builder = self._term_to_column_builders[term]
+            term_to_column_builders[term] = column_builder
+        return DesignMatrixBuilder(terms,
+                                   evaluators,
+                                   term_to_column_builders)
+
     def _build(self, evaluator_to_values, dtype):
         factor_to_values = {}
         need_reshape = False
@@ -782,6 +863,9 @@ def build_design_matrices(builders, data,
     whole data set is already encapsulated in the `builders`. If you are
     incrementally processing a large data set, simply call this function for
     each chunk.
+
+    .. versionadded:: 0.2.0
+       The ``NA_action`` argument.
     """
     if isinstance(NA_action, basestring):
         NA_action = NAAction(NA_action)
@@ -834,6 +918,9 @@ def build_design_matrices(builders, data,
     # Handle NAs
     values = evaluator_to_values.values()
     is_NAs = evaluator_to_isNAs.values()
+    # num_rows is None iff evaluator_to_values (and associated sets like
+    # 'values') are empty, i.e., we have no actual evaluators involved
+    # (formulas like "~ 1").
     if return_type == "dataframe" and num_rows is not None:
         if pandas_index is None:
             pandas_index = np.arange(num_rows)
@@ -841,6 +928,9 @@ def build_design_matrices(builders, data,
         is_NAs.append(np.zeros(len(pandas_index), dtype=bool))
     origins = [evaluator.factor.origin for evaluator in evaluator_to_values]
     new_values = NA_action.handle_NA(values, is_NAs, origins)
+    # NA_action may have changed the number of rows.
+    if num_rows is not None:
+        num_rows = new_values[0].shape[0]
     if return_type == "dataframe" and num_rows is not None:
         pandas_index = new_values.pop()
     evaluator_to_values = dict(zip(evaluator_to_values, new_values))

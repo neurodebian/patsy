@@ -90,6 +90,9 @@ def incr_dbuilder(formula_like, data_iter_maker, eval_env=0, NA_action="drop"):
               yield data_chunk
 
     and pass `iter_maker` (*not* `iter_maker()`).
+
+    .. versionadded:: 0.2.0
+       The ``NA_action`` argument.
     """
     eval_env = EvalEnvironment.capture(eval_env, reference=1)
     builders = _try_incr_builders(formula_like, data_iter_maker, eval_env,
@@ -228,10 +231,12 @@ def dmatrix(formula_like, data={}, eval_env=0,
       values count as 'missing' (and how to alter this).
     :arg return_type: Either ``"matrix"`` or ``"dataframe"``. See below.
 
-    The `formula_like` can take a variety of forms:
+    The `formula_like` can take a variety of forms. You can use any of the
+    following:
 
-    * A formula string like "x1 + x2" (for :func:`dmatrix`) or "y ~ x1 + x2"
-      (for :func:`dmatrices`). For details see :ref:`formulas`.
+    * (The most common option) A formula string like ``"x1 + x2"`` (for
+      :func:`dmatrix`) or ``"y ~ x1 + x2"`` (for :func:`dmatrices`). For
+      details see :ref:`formulas`.
     * A :class:`ModelDesc`, which is a Python object representation of a
       formula. See :ref:`formulas` and :ref:`expert-model-specification` for
       details.
@@ -252,18 +257,21 @@ def dmatrix(formula_like, data={}, eval_env=0,
         their (row) indexes checked. If two are passed in, their indexes must
         be aligned. If ``return_type="dataframe"``, then their indexes will be
         preserved on the output.
-      
+
     Regardless of the input, the return type is always either:
 
     * A :class:`DesignMatrix`, if ``return_type="matrix"`` (the default)
     * A :class:`pandas.DataFrame`, if ``return_type="dataframe"``.
 
     The actual contents of the design matrix is identical in both cases, and
-    in both cases a :class:`DesignInfo` will be available in a
+    in both cases a :class:`DesignInfo` object will be available in a
     ``.design_info`` attribute on the return value. However, for
     ``return_type="dataframe"``, any pandas indexes on the input (either in
-    `data` or directly passed through `formula_like`) will be
-    preserved, which may be useful for e.g. time-series models.
+    `data` or directly passed through `formula_like`) will be preserved, which
+    may be useful for e.g. time-series models.
+
+    .. versionadded:: 0.2.0
+       The ``NA_action`` argument.
     """
     eval_env = EvalEnvironment.capture(eval_env, reference=1)
     (lhs, rhs) = _do_highlevel_design(formula_like, data, eval_env,
@@ -281,11 +289,6 @@ def dmatrices(formula_like, data={}, eval_env=0,
     (and returns) two matrices instead of one. By convention, the first matrix
     is the "outcome" or "y" data, and the second is the "predictor" or "x"
     data.
-
-    
-    it requires the
-    formula to specify both a left-hand side outcome matrix and a right-hand
-    side predictors matrix, which are returned as a tuple.
 
     See :func:`dmatrix` for details.
     """

@@ -11,10 +11,10 @@ from nose.tools import assert_raises
 from patsy import PatsyError
 from patsy.design_info import DesignMatrix
 from patsy.eval import EvalEnvironment
-from patsy.desc import ModelDesc, Term, LookupFactor, INTERCEPT
+from patsy.desc import ModelDesc, Term, INTERCEPT
 from patsy.categorical import C
 from patsy.contrasts import Helmert
-from patsy.user_util import balanced
+from patsy.user_util import balanced, LookupFactor
 from patsy.build import (design_matrix_builders,
                          build_design_matrices,
                          DesignMatrixBuilder)
@@ -645,12 +645,34 @@ def test_evalfactor_reraise():
 def test_dmatrix_NA_action():
     data = {"x": [1, 2, 3, np.nan], "y": [np.nan, 20, 30, 40]}
 
-    mat = dmatrix("x + y", data=data)
-    assert np.array_equal(mat, [[1, 2, 20],
-                                [1, 3, 30]])
-    assert_raises(PatsyError, dmatrix, "x + y", data=data, NA_action="raise")
+    for return_type in ["matrix", "dataframe"]:
+        mat = dmatrix("x + y", data=data, return_type=return_type)
+        assert np.array_equal(mat, [[1, 2, 20],
+                                    [1, 3, 30]])
+        if return_type == "dataframe":
+            assert mat.index.equals([1, 2])
+        assert_raises(PatsyError, dmatrix, "x + y", data=data,
+                      return_type=return_type,
+                      NA_action="raise")
 
-    lmat, rmat = dmatrices("y ~ x", data=data)
-    assert np.array_equal(lmat, [[20], [30]])
-    assert np.array_equal(rmat, [[1, 2], [1, 3]])
-    assert_raises(PatsyError, dmatrices, "y ~ x", data=data, NA_action="raise")
+        lmat, rmat = dmatrices("y ~ x", data=data, return_type=return_type)
+        assert np.array_equal(lmat, [[20], [30]])
+        assert np.array_equal(rmat, [[1, 2], [1, 3]])
+        if return_type == "dataframe":
+            assert lmat.index.equals([1, 2])
+            assert rmat.index.equals([1, 2])
+        assert_raises(PatsyError,
+                      dmatrices, "y ~ x", data=data, return_type=return_type,
+                      NA_action="raise")
+
+        # Initial release for the NA handling code had problems with
+        # non-data-dependent matrices like "~ 1".
+        lmat, rmat = dmatrices("y ~ 1", data=data, return_type=return_type)
+        assert np.array_equal(lmat, [[20], [30], [40]])
+        assert np.array_equal(rmat, [[1], [1], [1]])
+        if return_type == "dataframe":
+            assert lmat.index.equals([1, 2, 3])
+            assert rmat.index.equals([1, 2, 3])
+        assert_raises(PatsyError,
+                      dmatrices, "y ~ 1", data=data, return_type=return_type,
+                      NA_action="raise")

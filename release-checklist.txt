@@ -1,5 +1,9 @@
-* update doc/changes.rst
-* make sure docs are up to date
+* docs:
+  * update doc/changes.rst
+  * make sure appropriate ..versionadded:: directives are present
+  * make sure docs are up to date
+  * verify that the ">97% coverage" claim in overview.rst is still true.
+  * cd docs; make html -- check that there are no warnings
 * check MANIFEST.in
 * update version in doc/changes.rst, setup.py, patsy/__init__.py
 * make sure there are no uncommitted changes
@@ -7,13 +11,13 @@
   without killing the expensive-to-recreate .tox dir)
 * python sdist --formats=zip
 * unzip sdist to a clean directory, and run tox in it
-* in original directory: tag, git push --tags
+* in original directory: git tag <version> && git push --tags
 * in clean clone: python sdist --formats=zip,gztar upload
 * Go to http://readthedocs.org/dashboard/patsy/versions/, set the new
   version to build and update the default.
 * announce release on:
   pydata@googlegroups.com
-  statsmodels
+  pystatsmodels@googlegroups.com
   scipy-dev?
   pypi
 * update version in setup.py, patsy/__init__.py again (add "+dev")
