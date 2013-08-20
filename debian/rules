@@ -2,6 +2,7 @@
 # -*- mode: makefile; coding: utf-8 -*-
 
 export DH_VERBOSE=1
+export http_proxy=http://127.0.0.1:9/
 
 PACKAGE2_NAME = python-patsy
 PACKAGE3_NAME = python3-patsy
