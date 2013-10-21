@@ -1,4 +1,12 @@
-patsy (0.2.1-1) unstable; urgency=low
+patsy (0.2.1-2) unstable; urgency=low
+
+  * Initial official Debian package (Closes: #718429)
+  * debian/copyright
+    - added missing copyright/license for facebox (MIT AKA Expat)
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Mon, 21 Oct 2013 15:50:44 -0400
+
+patsy (0.2.1-1) neurodebian; urgency=low
 
   * Fresh upstream release
   * debian/rules:
@@ -9,8 +17,8 @@ patsy (0.2.1-1) unstable; urgency=low
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Tue, 20 Aug 2013 14:03:29 -0400
 
-patsy (0.1.0+git60-g7ddb7f3-1) unstable; urgency=low
+patsy (0.1.0+git60-g7ddb7f3-1) neurodebian; urgency=low
 
-  * Initial Debian package (Closes: #718429)
+  * Initial Debian packaging
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Wed, 31 Jul 2013 13:43:28 -0400
