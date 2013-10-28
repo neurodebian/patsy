@@ -1,11 +1,5 @@
 Tests: unittests
-Depends: python-all,
-         python-nose,
-         python-numpy,
-         python-pandas,
+Depends: python-all, python-nose, python-numpy, python-patsy
 
 Tests: unittests3
-Depends: python3-all,
-         python3-nose,
-         python3-numpy,
-         python3-pandas,
+Depends: python3-all, python3-nose, python3-numpy, python3-patsy
