@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # Missing data detection/handling
 
@@ -155,6 +155,7 @@ class NAAction(object):
         :returns: A list of new values (which may have a differing number of
           rows.)
         """
+        assert len(values) == len(is_NAs) == len(origins)
         if len(values) == 0:
             return values
         if self.on_NA == "raise":

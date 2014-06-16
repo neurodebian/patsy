@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011-2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # This file defines the core design matrix building functions.
 
@@ -827,6 +827,29 @@ class DesignMatrixBuilder(object):
         assert start_column == self.total_columns
         return need_reshape, m
 
+class _CheckMatch(object):
+    def __init__(self, name, eq_fn):
+        self._name = name
+        self._eq_fn = eq_fn
+        self.value = None
+        self._value_desc = None
+        self._value_origin = None
+
+    def check(self, seen_value, desc, origin):
+        if self.value is None:
+            self.value = seen_value
+            self._value_desc = desc
+            self._value_origin = origin
+        else:
+            if not self._eq_fn(self.value, seen_value):
+                msg = ("%s mismatch between %s and %s"
+                       % (self._name, self._value_desc, desc))
+                if isinstance(self.value, int):
+                    msg += " (%r versus %r)" % (self.value, seen_value)
+                # XX FIXME: this is a case where having discontiguous Origins
+                # would be useful...
+                raise PatsyError(msg, origin)
+
 def build_design_matrices(builders, data,
                           NA_action="drop",
                           return_type="matrix",
@@ -851,18 +874,46 @@ def build_design_matrices(builders, data,
 
     This function returns either a list of :class:`DesignMatrix` objects (for
     ``return_type="matrix"``) or a list of :class:`pandas.DataFrame` objects
-    (for ``return_type="dataframe"``). In the latter case, the DataFrames will
-    preserve any (row) indexes that were present in the input, which may be
-    useful for time-series models etc. In any case, all returned design
+    (for ``return_type="dataframe"``). In both cases, all returned design
     matrices will have ``.design_info`` attributes containing the appropriate
     :class:`DesignInfo` objects.
 
-    Unlike :func:`design_matrix_builders`, this function takes only a simple
-    data argument, not any kind of iterator. That's because this function
-    doesn't need a global view of the data -- everything that depends on the
-    whole data set is already encapsulated in the `builders`. If you are
-    incrementally processing a large data set, simply call this function for
-    each chunk.
+    Note that unlike :func:`design_matrix_builders`, this function takes only
+    a simple data argument, not any kind of iterator. That's because this
+    function doesn't need a global view of the data -- everything that depends
+    on the whole data set is already encapsulated in the `builders`. If you
+    are incrementally processing a large data set, simply call this function
+    for each chunk.
+
+    Index handling: This function always checks for indexes in the following
+    places:
+
+    * If ``data`` is a :class:`pandas.DataFrame`, its ``.index`` attribute.
+    * If any factors evaluate to a :class:`pandas.Series` or
+      :class:`pandas.DataFrame`, then their ``.index`` attributes.
+
+    If multiple indexes are found, they must be identical (same values in the
+    same order). If no indexes are found, then a default index is generated
+    using ``np.arange(num_rows)``. One way or another, we end up with a single
+    index for all the data. If ``return_type="dataframe"``, then this index is
+    used as the index of the returned DataFrame objects. Examining this index
+    makes it possible to determine which rows were removed due to NAs.
+
+    Determining the number of rows in design matrices: This is not as obvious
+    as it might seem, because it's possible to have a formula like "~ 1" that
+    doesn't depend on the data (it has no factors). For this formula, it's
+    obvious what every row in the design matrix should look like (just the
+    value ``1``); but, how many rows like this should there be? To determine
+    the number of rows in a design matrix, this function always checks in the
+    following places:
+
+    * If ``data`` is a :class:`pandas.DataFrame`, then its number of rows.
+    * The number of entries in any factors present in any of the design
+    * matrices being built.
+
+    All these values much match. In particular, if this function is called to
+    generate multiple design matrices at once, then they must all have the
+    same number of rows.
 
     .. versionadded:: 0.2.0
        The ``NA_action`` argument.
@@ -878,8 +929,12 @@ def build_design_matrices(builders, data,
     # Evaluate factors
     evaluator_to_values = {}
     evaluator_to_isNAs = {}
-    num_rows = None
-    pandas_index = None
+    import operator
+    rows_checker = _CheckMatch("Number of rows", lambda a, b: a == b)
+    index_checker = _CheckMatch("Index", lambda a, b: a.equals(b))
+    if have_pandas and isinstance(data, pandas.DataFrame):
+        index_checker.check(data.index, "data.index", None)
+        rows_checker.check(data.shape[0], "data argument", None)
     for builder in builders:
         # We look at evaluators rather than factors here, because it might
         # happen that we have the same factor twice, but with different
@@ -889,24 +944,12 @@ def build_design_matrices(builders, data,
                 value, is_NA = evaluator.eval(data, NA_action)
                 evaluator_to_isNAs[evaluator] = is_NA
                 # value may now be a Series, DataFrame, or ndarray
-                if num_rows is None:
-                    num_rows = value.shape[0]
-                else:
-                    if num_rows != value.shape[0]:
-                        msg = ("Row mismatch: factor %s had %s rows, when "
-                               "previous factors had %s rows"
-                               % (evaluator.factor.name(), value.shape[0],
-                                  num_rows))
-                        raise PatsyError(msg, evaluator.factor)
+                name = evaluator.factor.name()
+                origin = evaluator.factor.origin
+                rows_checker.check(value.shape[0], name, origin)
                 if (have_pandas
                     and isinstance(value, (pandas.Series, pandas.DataFrame))):
-                    if pandas_index is None:
-                        pandas_index = value.index
-                    else:
-                        if not pandas_index.equals(value.index):
-                            msg = ("Index mismatch: pandas objects must "
-                                   "have aligned indexes")
-                            raise PatsyError(msg, evaluator.factor)
+                    index_checker.check(value.index, name, origin)
                 # Strategy: we work with raw ndarrays for doing the actual
                 # combining; DesignMatrixBuilder objects never sees pandas
                 # objects. Then at the end, if a DataFrame was requested, we
@@ -918,6 +961,9 @@ def build_design_matrices(builders, data,
     # Handle NAs
     values = evaluator_to_values.values()
     is_NAs = evaluator_to_isNAs.values()
+    origins = [evaluator.factor.origin for evaluator in evaluator_to_values]
+    pandas_index = index_checker.value
+    num_rows = rows_checker.value
     # num_rows is None iff evaluator_to_values (and associated sets like
     # 'values') are empty, i.e., we have no actual evaluators involved
     # (formulas like "~ 1").
@@ -926,10 +972,10 @@ def build_design_matrices(builders, data,
             pandas_index = np.arange(num_rows)
         values.append(pandas_index)
         is_NAs.append(np.zeros(len(pandas_index), dtype=bool))
-    origins = [evaluator.factor.origin for evaluator in evaluator_to_values]
+        origins.append(None)
     new_values = NA_action.handle_NA(values, is_NAs, origins)
     # NA_action may have changed the number of rows.
-    if num_rows is not None:
+    if new_values:
         num_rows = new_values[0].shape[0]
     if return_type == "dataframe" and num_rows is not None:
         pandas_index = new_values.pop()
@@ -940,19 +986,23 @@ def build_design_matrices(builders, data,
         results.append(builder._build(evaluator_to_values, dtype))
     matrices = []
     for need_reshape, matrix in results:
-        if need_reshape and num_rows is not None:
+        if need_reshape:
+            # There is no data-dependence, at all -- a formula like "1 ~ 1".
+            # In this case the builder just returns a single-row matrix, and
+            # we have to broadcast it vertically to the appropriate size. If
+            # we can figure out what that is...
             assert matrix.shape[0] == 1
-            matrices.append(DesignMatrix(np.repeat(matrix, num_rows, axis=0),
-                                         matrix.design_info))
-        else:
-            # There is no data-dependence, at all -- a formula like "1 ~ 1". I
-            # guess we'll just return some single-row matrices. Perhaps it
-            # would be better to figure out how many rows are in the input
-            # data and broadcast to that size, but eh. Input data is optional
-            # in the first place, so even that would be no guarantee... let's
-            # wait until someone actually has a relevant use case before we
-            # worry about it.
-            matrices.append(matrix)
+            if num_rows is not None:
+                matrix = DesignMatrix(np.repeat(matrix, num_rows, axis=0),
+                                      matrix.design_info)
+            else:
+                raise PatsyError(
+                    "No design matrix has any non-trivial factors, "
+                    "the data object is not a DataFrame. "
+                    "I can't tell how many rows the design matrix should "
+                    "have!"
+                    )
+        matrices.append(matrix)
     if return_type == "dataframe":
         assert have_pandas
         for i, matrix in enumerate(matrices):

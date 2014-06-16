@@ -12,7 +12,7 @@ First, let's import stuff and get some data to work with:
 
    import numpy as np
    from patsy import dmatrices, dmatrix, demo_data
-   data = demo_data("a", "b", "x1", "x2", "y")
+   data = demo_data("a", "b", "x1", "x2", "y", "z column")
 
 :func:`demo_data` gives us a mix of categorical and numerical
 variables:
@@ -89,8 +89,8 @@ We can transform variables using arbitrary Python code:
 
    dmatrix("x1 + np.log(x2 + 10)", data)
 
-Notice that `np.log` is being pulled out of the environment where
-:func:`dmatrix` was called -- `np.log` is accessible because we did
+Notice that ``np.log`` is being pulled out of the environment where
+:func:`dmatrix` was called -- ``np.log`` is accessible because we did
 ``import numpy as np`` up above. Any functions or variables that you
 could reference when calling :func:`dmatrix` can also be used inside
 the formula passed to :func:`dmatrix`. For example:
@@ -115,15 +115,49 @@ functions in the ordinary Python way:
 
    def double(x):
        return 2 * x
+
    dmatrix("x1 + double(x1)", data)
 
+.. currentmodule:: patsy.builtins
+
+This flexibility does create problems in one case, though -- because
+we interpret whatever you write in-between the ``+`` signs as Python
+code, you do in fact have to write valid Python code. And this can be
+tricky if your variable names have funny characters in them, like
+whitespace or punctuation. Fortunately, patsy has a builtin
+"transformation" called :func:`Q` that lets you "quote" such
+variables:
+
+.. ipython::
+
+   In [1]: weird_data = demo_data("weird column!", "x1")
+
+   # This is an error...
+   @verbatim
+   In [2]: dmatrix("weird column! + x1", weird_data)
+   [...]
+   PatsyError: error tokenizing input (maybe an unclosed string?)
+       weird column! + x1
+                   ^
+
+   # ...but this works:
+   In [3]: dmatrix("Q('weird column!') + x1", weird_data)
+
+:func:`Q` even plays well with other transformations:
+
+.. ipython:: python
+
+   dmatrix("double(Q('weird column!')) + x1", weird_data)
+
 Arithmetic transformations are also possible, but you'll need to
-"protect" them by wrapping them in ``I()``, so that Patsy knows
+"protect" them by wrapping them in :func:`I()`, so that Patsy knows
 that you really do want ``+`` to mean addition:
 
 .. ipython:: python
 
    dmatrix("I(x1 + x2)", data)  # compare to "x1 + x2"
+
+.. currentmodule:: patsy
 
 Note that while Patsy goes to considerable efforts to take in data
 represented using different Python data types and convert them into a

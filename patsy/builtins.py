@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011-2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # This module sets up the namespace of stuff that is available to formulas by
 # default. All formulas are interpreted in an environment that acts as if
@@ -52,7 +52,7 @@ def Q(name):
     works even if instead of ``x``, we have a variable name that would not
     otherwise be legal in Python.
 
-    For example, if you have a column of data named `weight.in.kg`, then you
+    For example, if you have a column of data named ``weight.in.kg``, then you
     can't write::
 
       y ~ weight.in.kg

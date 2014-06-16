@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2012-2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # There are a number of unit tests in build.py, but this file contains more
 # thorough tests of the overall design matrix building system. (These are
@@ -144,7 +144,7 @@ def test_redundancy_thoroughly():
     data = balanced(a=2, b=2, repeat=5)
     data["x1"] = np.linspace(0, 1, len(data["a"]))
     data["x2"] = data["x1"] ** 2
-    
+
     def all_subsets(l):
         if not l:
             yield tuple()
@@ -159,7 +159,7 @@ def test_redundancy_thoroughly():
     print len(all_termlist_templates)
     # eliminate some of the symmetric versions to speed things up
     redundant = [[("b",), ("a",)],
-                 [("x2",), ("x1")],
+                 [("x2",), ("x1",)],
                  [("b", "x2"), ("a", "x1")],
                  [("a", "b", "x2"), ("a", "b", "x1")],
                  [("b", "x1", "x2"), ("a", "x1", "x2")]]
@@ -179,12 +179,18 @@ def test_redundancy_thoroughly():
             # Because our categorical variables have 2 levels, each expanded
             # term corresponds to 1 unique dimension of variation
             expected_rank = len(expanded_terms)
-            make_matrix(data, expected_rank, termlist_template)
+            if termlist_template in [(), ((),)]:
+                # No data dependence, should fail
+                assert_raises(PatsyError,
+                              make_matrix,
+                              data, expected_rank, termlist_template)
+            else:
+                make_matrix(data, expected_rank, termlist_template)
             count += 1
     print count
 
 test_redundancy_thoroughly.slow = 1
-    
+
 def test_data_types():
     basic_dict = {"a": ["a1", "a2", "a1", "a2"],
                   "x": [1, 2, 3, 4]}
@@ -320,6 +326,7 @@ def test_return_type_pandas():
                             index=[10, 20, 30])
     def iter_maker():
         yield data
+    int_builder, = design_matrix_builders([make_termlist([])], iter_maker)
     (y_builder, x_builder) = design_matrix_builders([make_termlist("y"),
                                                      make_termlist("x")],
                                                     iter_maker)
@@ -336,7 +343,22 @@ def test_return_type_pandas():
                   build_design_matrices,
                   [y_builder, x_builder],
                   {"x": data["x"], "y": data["y"][::-1]})
-    # But a mix of pandas input and unindexed input is fine
+    # And we also check consistency between data.index and value indexes
+    # Creating a mismatch between these is a bit tricky. We want a data object
+    # such that isinstance(data, DataFrame), but data["x"].index !=
+    # data.index.
+    class CheatingDataFrame(pandas.DataFrame):
+        def __getitem__(self, key):
+            if key == "x":
+                return pandas.DataFrame.__getitem__(self, key)[::-1]
+            else:
+                return pandas.DataFrame.__getitem__(self, key)
+    assert_raises(PatsyError,
+                  build_design_matrices,
+                  [x_builder],
+                  CheatingDataFrame(data))
+
+    # A mix of pandas input and unindexed input is fine
     (mat,) = build_design_matrices([x_y_builder],
                                    {"x": data["x"], "y": [40, 50, 60]})
     assert np.allclose(mat, [[1, 40], [2, 50], [3, 60]])
@@ -389,6 +411,14 @@ def test_return_type_pandas():
     assert isinstance(x_y_df, pandas.DataFrame)
     assert np.array_equal(x_y_df, [[10, 7], [11, 8], [12, 9]])
     assert np.array_equal(x_y_df.index, [0, 1, 2])
+
+    # If 'data' is a DataFrame, then that suffices, even if no factors are
+    # available.
+    (int_df,) = build_design_matrices([int_builder], data,
+                                      return_type="dataframe")
+    assert isinstance(int_df, pandas.DataFrame)
+    assert np.array_equal(int_df, [[1], [1], [1]])
+    assert int_df.index.equals([10, 20, 30])
 
     import patsy.build
     had_pandas = patsy.build.have_pandas
@@ -471,15 +501,31 @@ def test_data_independent_builder():
     def iter_maker():
         yield data
 
-    # If building a formula that doesn't depend on the data at all, we just
-    # return a single-row matrix.
-    m = make_matrix(data, 0, [], column_names=[])
-    assert m.shape == (1, 0)
+    # Trying to build a matrix that doesn't depend on the data at all is an
+    # error, if:
+    # - the index argument is not given
+    # - the data is not a DataFrame
+    # - there are no other matrices
+    null_builder = design_matrix_builders([make_termlist()], iter_maker)[0]
+    assert_raises(PatsyError, build_design_matrices, [null_builder], data)
 
-    m = make_matrix(data, 1, [[]], column_names=["Intercept"])
-    assert np.allclose(m, [[1]])
+    intercept_builder = design_matrix_builders([make_termlist([])],
+                                               iter_maker)[0]
+    assert_raises(PatsyError, build_design_matrices, [intercept_builder], data)
 
-    # Or, if there are other matrices that do depend on the data, we make the
+    assert_raises(PatsyError,
+                  build_design_matrices,
+                  [null_builder, intercept_builder], data)
+
+    # If data is a DataFrame, it sets the number of rows.
+    if have_pandas:
+        int_m, null_m = build_design_matrices([intercept_builder,
+                                               null_builder],
+                                              pandas.DataFrame(data))
+        assert np.allclose(int_m, [[1], [1], [1]])
+        assert null_m.shape == (3, 0)
+
+    # If there are other matrices that do depend on the data, we make the
     # data-independent matrices have the same number of rows.
     x_termlist = make_termlist(["x"])
 

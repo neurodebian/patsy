@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # This file implements a simple "shunting yard algorithm" parser for infix
 # languages with parentheses. It is used as the core of our parser for
@@ -48,7 +48,7 @@ class Token(object):
     .. attribute:: type
 
        An arbitrary object indicating the type of this token. Should be
-      :term:`hashable`, but otherwise 
+      :term:`hashable`, but otherwise it can be whatever you like.
     """
     LPAREN = _UniqueValue("LPAREN")
     RPAREN = _UniqueValue("RPAREN")

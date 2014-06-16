@@ -137,9 +137,14 @@ The full interface looks like this:
 .. class:: factor_protocol
 
     .. method:: name()
-    
+
        This must return a short string describing this factor. It will
        be used to create column names, among other things.
+
+    .. attribute:: origin
+
+       A :class:`patsy.Origin` if this factor has one; otherwise, just
+       set it to None.
 
     .. method:: __eq__(obj)
                 __ne__(obj)
@@ -230,7 +235,9 @@ passes numerical data through unchanged, so in extremis you can:
   return a :class:`ModelDesc`. And your :class:`ModelDesc` can, of
   course, include your special factor object(s).
 
-Put together, it looks something like this::
+Put together, it looks something like this:
+
+.. code-block:: python
 
   class MyAlternativeFactor(object):
       # A factor object that simply returns the design 

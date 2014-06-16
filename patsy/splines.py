@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2012-2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # R-compatible spline basis functions
 
@@ -103,11 +103,14 @@ class BS(object):
     A spline with ``degree=0`` is piecewise constant with breakpoints at each
     knot, and the default knot positions are quantiles of the input. So if you
     find yourself in the situation of wanting to quantize a continuous
-    variable into equal-sized bins with a constant effect across each bin, you
-    can use ``bs(x, num_bins, degree=0)``.
+    variable into ``num_bins`` equal-sized bins with a constant effect across
+    each bin, you can use ``bs(x, num_bins - 1, degree=0)``. (The ``- 1`` is
+    because one degree of freedom will be taken by the intercept;
+    alternatively, you could leave the intercept term out of your model and
+    use ``bs(x, num_bins, degree=0, include_intercept=True)``.
 
-    Similarly, a spline with ``degree=1`` is piecewise linear with breakpoints
-    at each knot.
+    A spline with ``degree=1`` is piecewise linear with breakpoints at each
+    knot.
 
     The default is ``degree=3``, which gives a cubic b-spline.
 

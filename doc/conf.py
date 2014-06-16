@@ -2,7 +2,7 @@
 
 # General information about the project.
 project = u'patsy'
-copyright = u'2011-2012, Nathaniel J. Smith'
+copyright = u'2011-2013, Nathaniel J. Smith'
 
 import sys
 print "python exec:", sys.executable
@@ -60,8 +60,16 @@ sys.path.append(os.path.abspath('sphinxext'))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.pngmath',
               'sphinx.ext.intersphinx',
-              'ipython_directive', 'ipython_console_highlighting',
+              'IPython.sphinxext.ipython_directive',
+              'IPython.sphinxext.ipython_console_highlighting',
               ]
+
+# Undocumented trick: if we def setup here in conf.py, it gets called just
+# like an extension's setup function.
+def setup(app):
+    app.add_javascript("show-code.js")
+    app.add_javascript("facebox.js")
+    app.add_stylesheet("facebox.css")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -148,16 +156,6 @@ html_theme = 'default'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-# Hack: the first three of these are the default script_files, because the
-# settings here actually *override* the defaults.
-html_context = {"script_files": ["_static/jquery.js",
-                                 "_static/underscore.js",
-                                 "_static/doctools.js",
-                                 "_static/show-code.js",
-                                 "_static/facebox.js",
-                                 ],
-                "css_files": ["_static/facebox.css"]}
-
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 #html_last_updated_fmt = '%b %d, %Y'
@@ -236,6 +234,8 @@ autoclass_content = "both"
 intersphinx_mapping = {"python": ("http://docs.python.org", None),
                        "numpy": ("http://docs.scipy.org/doc/numpy",
                                  None),
+                       "pandas": ('http://pandas.pydata.org/pandas-docs/stable/',
+                                  None),
                        }
 
 autodoc_member_order = "source"

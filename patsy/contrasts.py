@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011-2012 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm
 # http://www.ats.ucla.edu/stat/sas/webbooks/reg/chapter5/sasreg5.htm
@@ -84,8 +84,12 @@ def test__obj_to_readable_str():
     t("asdf", "asdf")
     t(u"asdf", "asdf")
     if sys.version_info >= (3,):
-        # a utf-8 encoded euro-sign comes out as a real euro sign
-        t(u"\u20ac".encode("utf-8"), "\u20ac")
+        # a utf-8 encoded euro-sign comes out as a real euro sign. We have to
+        # use u""-style strings here, even though this is a py3-only block,
+        # because otherwise 2to3 may be clever enough to realize that in py2
+        # "\u20ac" produces a literal \, and double it for us when
+        # converting.
+        t(u"\u20ac".encode("utf-8"), u"\u20ac")
         # but a iso-8859-15 euro sign can't be decoded, and we fall back on
         # repr()
         t(u"\u20ac".encode("iso-8859-15"), "b'\\xa4'")

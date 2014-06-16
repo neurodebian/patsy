@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011-2013 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 """patsy is a Python package for describing statistical models and building
 design matrices. It is closely inspired by the 'formula' mini-language used in
@@ -8,7 +8,7 @@ R and S."""
 
 import sys
 
-__version__ = "0.2.1"
+from patsy.version import __version__
 
 # Do this first, to make it easy to check for warnings while testing:
 import os

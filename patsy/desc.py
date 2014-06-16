@@ -1,6 +1,6 @@
 # This file is part of Patsy
 # Copyright (C) 2011-2012 Nathaniel Smith <njs@pobox.com>
-# See file COPYING for license information.
+# See file LICENSE.txt for license information.
 
 # This file defines the ModelDesc class, which describes a model at a high
 # level, as a list of interactions of factors. It also has the code to convert
@@ -82,6 +82,10 @@ def test_Term():
 
 _builtins_dict = {}
 exec "from patsy.builtins import *" in {}, _builtins_dict
+# This is purely to make the existence of patsy.builtins visible to systems
+# like py2app and py2exe. It's basically free, since the above line guarantees
+# that patsy.builtins will be present in sys.modules in any case.
+import patsy.builtins
 
 class ModelDesc(object):
     """A simple container representing the termlists parsed from a formula.
