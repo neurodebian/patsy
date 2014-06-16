@@ -9,6 +9,7 @@ Build-Depends: debhelper (>= 7.0.50),
                python-numpy,
                python-pandas,
                python-nose,
+               python-openpyxl,
                python3-all,
                python3-setuptools,
                python3-numpy,
@@ -17,6 +18,7 @@ Build-Depends: debhelper (>= 7.0.50),
                python-matplotlib,
                python-sphinx,
                ipython,
+               ipython (>= 1.0) | ipython1x,
 X-Python-Version: >= 2.6
 X-Python3-Version: >= 3.2
 Standards-Version: 3.9.4
@@ -29,7 +31,7 @@ Package: python-patsy
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends},
          python-numpy,
-Recommends: python-pandas,
+Recommends: python-pandas, python-openpyxl,
 Suggests: python-patsy-doc
 Description: statistical models in Python using symbolic formulas
  patsy is a Python library for describing statistical models

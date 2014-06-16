@@ -25,6 +25,8 @@ EXCLUDE_TESTS3.3 :=
 
 # MPLVER := $(shell dpkg -l python-matplotlib | awk '/^ii/{print $$3;}' || echo 0)
 # $(shell dpkg --compare-versions $(MPLVER) lt 1.0 && echo '|test_hist|test_plot|test_boxplot|test_corr_rank' || echo '')
+IPYTHONVER := $(shell dpkg -l ipython | awk '/^ii/{print $$3;}' || echo 0)
+IPYTHONPATH=$(shell dpkg --compare-versions $(IPYTHONVER) lt 1.0 && echo ':/usr/share/pyshared/IPython1X/' || echo '')
 
 # Mega rule
 %:
@@ -46,7 +48,7 @@ override_dh_auto_install: $(PYVERS:%=python-install%) $(PY3VERS:%=python-install
 	: # nothing more to do
 
 override_dh_clean:
-	rm -rf build *.egg-info
+	rm -rf build *.egg-info doc/_build
 	dh_clean
 
 python-test%: python-install%
@@ -68,8 +70,7 @@ ifeq (,$(filter nodoc,$(DEB_BUILD_OPTIONS)))
 ifneq (,$(findstring -a,$(DH_INTERNAL_OPTIONS)))
 	: # not building documentation in -a
 else
-	: # not building documentation ATM since requires ipython 0.11
-	export PYTHONPATH=`/bin/ls -d $$PWD/$(PACKAGE2_ROOT_DIR)/usr/lib/python$(PYVER)/*`; \
+	export PYTHONPATH=`/bin/ls -d $$PWD/$(PACKAGE2_ROOT_DIR)/usr/lib/python$(PYVER)/*`$(IPYTHONPATH); \
 	export MPLCONFIGDIR=$(CURDIR)/build HOME=$(CURDIR)/build; \
 	 make -C doc html
 	: # Use jquery from Debian package, so prune shipped one
