@@ -34,6 +34,7 @@ __all__ = ["C", "guess_categorical", "CategoricalSniffer",
 # handle the different stages of categorical data munging.
 
 import numpy as np
+import six
 from patsy import PatsyError
 from patsy.state import stateful_transform
 from patsy.util import (SortAnythingKey,
@@ -165,6 +166,11 @@ class CategoricalSniffer(object):
             else:
                 # unbox and fall through
                 data = data.data
+        # fastpath to avoid doing an item-by-item iteration over boolean
+        # arrays, as requested by #44
+        if hasattr(data, "dtype") and np.issubdtype(data.dtype, np.bool_):
+            self._level_set = set([True, False])
+            return True
         for value in data:
             if self._NA_action.is_categorical_NA(value):
                 continue
@@ -264,13 +270,19 @@ def categorical_to_int(data, levels, NA_action, origin=None):
     if hasattr(data, "shape") and len(data.shape) > 1:
         raise PatsyError("categorical data must be 1-dimensional",
                          origin)
-    if not iterable(data) or isinstance(data, basestring):
+    if (not iterable(data)
+        or isinstance(data, (six.text_type, six.binary_type))):
         raise PatsyError("categorical data must be an iterable container")
     try:
-        level_to_int = dict(zip(levels, xrange(len(levels))))
+        level_to_int = dict(zip(levels, range(len(levels))))
     except TypeError:
         raise PatsyError("Error interpreting categorical data: "
                          "all items must be hashable", origin)
+    # fastpath to avoid doing an item-by-item iteration over boolean arrays,
+    # as requested by #44
+    if hasattr(data, "dtype") and np.issubdtype(data.dtype, np.bool_):
+        if level_to_int[False] == 0 and level_to_int[True] == 1:
+            return data.astype(np.int_)
     out = np.empty(len(data), dtype=int)
     for i, value in enumerate(data):
         if NA_action.is_categorical_NA(value):
