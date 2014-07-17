@@ -5,6 +5,7 @@ patsy (0.3.0-1) unstable; urgency=medium
   * debian/patches -- all CPed changesets dropped
   * debian/control
     - adding python-openpyxl into build-depends (for testing) and recommends
+    - adding python{,3}-six into build-depends
     - adding ipython1x (for NeuroDebian backport builds) to build-depends as
       a complement to stock ipython if stock ipython is too old (to build
       documentation)
