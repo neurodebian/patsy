@@ -33,6 +33,7 @@ Package: python-patsy
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends},
          python-numpy,
+         python-patsy,
 Recommends: python-pandas, python-openpyxl,
 Suggests: python-patsy-doc
 Description: statistical models in Python using symbolic formulas
@@ -46,6 +47,7 @@ Package: python3-patsy
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
          python3-numpy,
+         python3-patsy,
 Recommends: python3-pandas,
 Suggests: python-patsy-doc
 Description: statistical models in Python using symbolic formulas
