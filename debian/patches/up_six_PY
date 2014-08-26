@@ -1,0 +1,32 @@
+--- a/patsy/compat.py
++++ b/patsy/compat.py
+@@ -129,3 +129,11 @@ def call_and_wrap_exc(msg, origin, f, *a
+             if isinstance(e, PatsyError):
+                 e.set_origin(origin)
+             raise
++
++# six
++import six
++if not hasattr(six, 'PY2'):
++    import sys
++    # Useful for very coarse version differentiation.
++    six.PY2 = sys.version_info[0] == 2
++    six.PY3 = sys.version_info[0] == 3
+--- a/patsy/test_build.py
++++ b/patsy/test_build.py
+@@ -9,7 +9,6 @@
+ 
+ from __future__ import print_function
+ 
+-import six
+ import numpy as np
+ from nose.tools import assert_raises
+ from patsy import PatsyError
+@@ -20,6 +19,7 @@ from patsy.build import *
+ from patsy.categorical import C
+ from patsy.user_util import balanced, LookupFactor
+ from patsy.design_info import DesignMatrix
++from patsy.compat import six
+ 
+ if have_pandas:
+     import pandas
