@@ -27,7 +27,8 @@
 import numpy as np
 from patsy.util import (atleast_2d_column_default,
                         asarray_or_pandas, pandas_friendly_reshape,
-                        wide_dtype_for)
+                        wide_dtype_for, safe_issubdtype,
+                        no_pickling, assert_no_pickling)
 from patsy.compat import wraps
 
 # These are made available in the patsy.* namespace
@@ -107,13 +108,15 @@ class Center(object):
         # heterogenous types. And in that case we're going to be munging the
         # types anyway, so copying isn't a big deal.
         x_arr = np.asarray(x)
-        if np.issubdtype(x_arr.dtype, np.integer):
+        if safe_issubdtype(x_arr.dtype, np.integer):
             dt = float
         else:
             dt = x_arr.dtype
         mean_val = np.asarray(self._sum / self._count, dtype=dt)
         centered = atleast_2d_column_default(x, preserve_pandas=True) - mean_val
         return pandas_friendly_reshape(centered, x.shape)
+
+    __getstate__ = no_pickling
 
 center = stateful_transform(Center)
 
@@ -170,6 +173,8 @@ class Standardize(object):
         if rescale:
             x_2d /= np.sqrt(self.current_M2 / (self.current_n - ddof))
         return pandas_friendly_reshape(x_2d, x.shape)
+
+    __getstate__ = no_pickling
 
 standardize = stateful_transform(Standardize)
 # R compatibility:

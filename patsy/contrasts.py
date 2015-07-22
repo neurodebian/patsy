@@ -15,7 +15,9 @@ import six
 import numpy as np
 from patsy import PatsyError
 from patsy.compat import triu_indices, tril_indices, diag_indices
-from patsy.util import repr_pretty_delegate, repr_pretty_impl
+from patsy.util import (repr_pretty_delegate, repr_pretty_impl,
+                        safe_issubdtype,
+                        no_pickling, assert_no_pickling)
 
 class ContrastMatrix(object):
     """A simple container for a matrix used for coding categorical factors.
@@ -46,6 +48,8 @@ class ContrastMatrix(object):
     def _repr_pretty_(self, p, cycle):
         repr_pretty_impl(p, self, [self.matrix, self.column_suffixes])
 
+    __getstate__ = no_pickling
+
 def test_ContrastMatrix():
     cm = ContrastMatrix([[1, 0], [0, 1]], ["a", "b"])
     assert np.array_equal(cm.matrix, np.eye(2))
@@ -55,6 +59,8 @@ def test_ContrastMatrix():
 
     from nose.tools import assert_raises
     assert_raises(PatsyError, ContrastMatrix, [[1], [0]], ["a", "b"])
+
+    assert_no_pickling(cm)
 
 # This always produces an object of the type that Python calls 'str' (whether
 # that be a Python 2 string-of-bytes or a Python 3 string-of-unicode). It does
@@ -176,6 +182,8 @@ class Treatment(object):
         names = _name_levels("T.", levels[:reference] + levels[reference + 1:])
         return ContrastMatrix(contrasts, names)
 
+    __getstate__ = no_pickling
+
 def test_Treatment():
     t1 = Treatment()
     matrix = t1.code_with_intercept(["a", "b", "c"])
@@ -272,6 +280,8 @@ class Poly(object):
     def code_without_intercept(self, levels):
         return self._code_either(False, levels)
 
+    __getstate__ = no_pickling
+
 def test_Poly():
     t1 = Poly()
     matrix = t1.code_with_intercept(["a", "b", "c"])
@@ -310,6 +320,11 @@ def test_Poly():
                        [[1, -0.806559132617443, 0.127000127000191],
                         [1, 0.293294230042706, -0.762000762001143],
                         [1, 0.513264902574736, 0.635000635000952]])
+
+    from nose.tools import assert_raises
+    assert_raises(PatsyError,
+                  Poly(scores=[0, 1]).code_with_intercept,
+                  ["a", "b", "c"])
 
     matrix = t1.code_with_intercept(list(range(6)))
     assert matrix.column_suffixes == [".Constant", ".Linear", ".Quadratic",
@@ -377,6 +392,8 @@ class Sum(object):
         omit_i = self._omit_i(levels)
         included_levels = levels[:omit_i] + levels[omit_i + 1:]
         return ContrastMatrix(matrix, _name_levels("S.", included_levels))
+
+    __getstate__ = no_pickling
 
 def test_Sum():
     t1 = Sum()
@@ -471,6 +488,8 @@ class Helmert(object):
         return ContrastMatrix(contrast,
                               _name_levels("H.", levels[1:]))
 
+    __getstate__ = no_pickling
+
 def test_Helmert():
     t1 = Helmert()
     for levels in (["a", "b", "c", "d"], ("a", "b", "c", "d")):
@@ -536,6 +555,8 @@ class Diff(object):
         contrast = self._diff_contrast(levels)
         return ContrastMatrix(contrast, _name_levels("D.", levels[:-1]))
 
+    __getstate__ = no_pickling
+
 def test_diff():
     t1 = Diff()
     matrix = t1.code_with_intercept(["a", "b", "c", "d"])
@@ -567,7 +588,7 @@ def code_contrast_matrix(intercept, levels, contrast, default=None):
     if isinstance(contrast, ContrastMatrix):
         return contrast
     as_array = np.asarray(contrast)
-    if np.issubdtype(as_array.dtype, np.number):
+    if safe_issubdtype(as_array.dtype, np.number):
         return ContrastMatrix(as_array,
                               _name_levels("custom", range(as_array.shape[1])))
     if intercept:

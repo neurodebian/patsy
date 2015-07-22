@@ -14,6 +14,7 @@ from patsy.parse_formula import ParseNode, Token, parse_formula
 from patsy.eval import EvalEnvironment, EvalFactor
 from patsy.util import uniqueify_list
 from patsy.util import repr_pretty_delegate, repr_pretty_impl
+from patsy.util import no_pickling, assert_no_pickling
 
 # These are made available in the patsy.* namespace
 __all__ = ["Term", "ModelDesc", "INTERCEPT"]
@@ -64,6 +65,8 @@ class Term(object):
         else:
             return "Intercept"
 
+    __getstate__ = no_pickling
+
 INTERCEPT = Term([])
 
 class _MockFactor(object):
@@ -83,12 +86,7 @@ def test_Term():
     assert Term([f2, f1]).name() == "b:a"
     assert Term([]).name() == "Intercept"
 
-_builtins_dict = {}
-six.exec_("from patsy.builtins import *", {}, _builtins_dict)
-# This is purely to make the existence of patsy.builtins visible to systems
-# like py2app and py2exe. It's basically free, since the above line guarantees
-# that patsy.builtins will be present in sys.modules in any case.
-import patsy.builtins
+    assert_no_pickling(Term([]))
 
 class ModelDesc(object):
     """A simple container representing the termlists parsed from a formula.
@@ -152,25 +150,23 @@ class ModelDesc(object):
         return result
             
     @classmethod
-    def from_formula(cls, tree_or_string, factor_eval_env):
+    def from_formula(cls, tree_or_string):
         """Construct a :class:`ModelDesc` from a formula string.
 
         :arg tree_or_string: A formula string. (Or an unevaluated formula
           parse tree, but the API for generating those isn't public yet. Shh,
           it can be our secret.)
-        :arg factor_eval_env: A :class:`EvalEnvironment`, to be used for
-          constructing :class:`EvalFactor` objects while parsing this
-          formula.
         :returns: A new :class:`ModelDesc`.
         """
         if isinstance(tree_or_string, ParseNode):
             tree = tree_or_string
         else:
             tree = parse_formula(tree_or_string)
-        factor_eval_env.add_outer_namespace(_builtins_dict)
-        value = Evaluator(factor_eval_env).eval(tree, require_evalexpr=False)
+        value = Evaluator().eval(tree, require_evalexpr=False)
         assert isinstance(value, cls)
         return value
+
+    __getstate__ = no_pickling
 
 def test_ModelDesc():
     f1 = _MockFactor("a")
@@ -181,6 +177,8 @@ def test_ModelDesc():
     print(m.describe())
     assert m.describe() == "1 + a ~ 0 + a + a:b"
 
+    assert_no_pickling(m)
+
     assert ModelDesc([], []).describe() == "~ 0"
     assert ModelDesc([INTERCEPT], []).describe() == "1 ~ 0"
     assert ModelDesc([INTERCEPT], [INTERCEPT]).describe() == "1 ~ 1"
@@ -189,10 +187,9 @@ def test_ModelDesc():
 
 def test_ModelDesc_from_formula():
     for input in ("y ~ x", parse_formula("y ~ x")):
-        eval_env = EvalEnvironment.capture(0)
-        md = ModelDesc.from_formula(input, eval_env)
-        assert md.lhs_termlist == [Term([EvalFactor("y", eval_env)]),]
-        assert md.rhs_termlist == [INTERCEPT, Term([EvalFactor("x", eval_env)])]
+        md = ModelDesc.from_formula(input)
+        assert md.lhs_termlist == [Term([EvalFactor("y")]),]
+        assert md.rhs_termlist == [INTERCEPT, Term([EvalFactor("x")])]
 
 class IntermediateExpr(object):
     "This class holds an intermediate result while we're evaluating a tree."
@@ -211,6 +208,8 @@ class IntermediateExpr(object):
         return repr_pretty_impl(p, self,
                                 [self.intercept, self.intercept_origin,
                                  self.intercept_removed, self.terms])
+
+    __getstate__ = no_pickling
 
 def _maybe_add_intercept(doit, terms):
     if doit:
@@ -356,14 +355,12 @@ def _eval_number(evaluator, tree):
                         "only allowed with **", tree)
 
 def _eval_python_expr(evaluator, tree):
-    factor = EvalFactor(tree.token.extra, evaluator._factor_eval_env,
-                        origin=tree.origin)
+    factor = EvalFactor(tree.token.extra, origin=tree.origin)
     return IntermediateExpr(False, None, False, [Term([factor])])
 
 class Evaluator(object):
-    def __init__(self, factor_eval_env):
+    def __init__(self):
         self._evaluators = {}
-        self._factor_eval_env = factor_eval_env
         self.add_op("~", 2, _eval_any_tilde)
         self.add_op("~", 1, _eval_any_tilde)
 
@@ -585,7 +582,7 @@ _eval_error_tests = [
     "a + <-a**2>",
 ]
 
-def _assert_terms_match(terms, expected_intercept, expecteds, eval_env): # pragma: no cover
+def _assert_terms_match(terms, expected_intercept, expecteds): # pragma: no cover
     if expected_intercept:
         expecteds = [()] + expecteds
     assert len(terms) == len(expecteds)
@@ -593,8 +590,7 @@ def _assert_terms_match(terms, expected_intercept, expecteds, eval_env): # pragm
         if isinstance(term, Term):
             if isinstance(expected, str):
                 expected = (expected,)
-            assert term.factors == tuple([EvalFactor(s, eval_env)
-                                          for s in expected])
+            assert term.factors == tuple([EvalFactor(s) for s in expected])
         else:
             assert term == expected
 
@@ -602,31 +598,27 @@ def _do_eval_formula_tests(tests): # pragma: no cover
     for code, result in six.iteritems(tests):
         if len(result) == 2:
             result = (False, []) + result
-        eval_env = EvalEnvironment.capture(0)
-        model_desc = ModelDesc.from_formula(code, eval_env)
+        model_desc = ModelDesc.from_formula(code)
         print(repr(code))
         print(result)
         print(model_desc)
         lhs_intercept, lhs_termlist, rhs_intercept, rhs_termlist = result
         _assert_terms_match(model_desc.lhs_termlist,
-                            lhs_intercept, lhs_termlist,
-                            eval_env)
+                            lhs_intercept, lhs_termlist)
         _assert_terms_match(model_desc.rhs_termlist,
-                            rhs_intercept, rhs_termlist,
-                            eval_env)
+                            rhs_intercept, rhs_termlist)
 
 def test_eval_formula():
     _do_eval_formula_tests(_eval_tests)
 
 def test_eval_formula_error_reporting():
     from patsy.parse_formula import _parsing_error_test
-    parse_fn = lambda formula: ModelDesc.from_formula(formula,
-                                                      EvalEnvironment.capture(0))
+    parse_fn = lambda formula: ModelDesc.from_formula(formula)
     _parsing_error_test(parse_fn, _eval_error_tests)
 
 def test_formula_factor_origin():
     from patsy.origin import Origin
-    desc = ModelDesc.from_formula("a + b", EvalEnvironment.capture(0))
+    desc = ModelDesc.from_formula("a + b")
     assert (desc.rhs_termlist[1].factors[0].origin
             == Origin("a + b", 0, 1))
     assert (desc.rhs_termlist[2].factors[0].origin

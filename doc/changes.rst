@@ -3,12 +3,71 @@ Changes
 
 .. currentmodule:: patsy
 
+v0.4.0
+------
+
+Incompatible changes:
+
+* :class:`EvalFactor` and :meth:`ModelDesc.from_formula` no longer
+  take an ``eval_env`` argument.
+
+* The :func:`design_matrix_builders` function and the
+  :meth:`factor_protocol.memorize_passes_needed` method now require an
+  ``eval_env`` as an additional argument.
+
+* The :class:`DesignInfo` constructor's arguments have totally
+  changed. In addition to the changes needed to support the new
+  features below, we no longer support "shim" DesignInfo objects that
+  have non-trivial term specifications. This was only included in the
+  first place to provide a compatibility hook for competing formula
+  libraries; four years later, no such libraries have shown up. If one
+  does, we can re-add it, but I'm not going to bother maintaining it
+  in the mean time...
+
+* Dropped support for Python 3.2.
+
+Other changes:
+
+* Patsy now supports Pandas's new (version 0.15 or later) categorical
+  objects.
+
+* Formulas (or more precisely, :class:`EvalFactor` objects) now only
+  keep a reference to the variables required from their environment
+  instead of the whole environment where the formula was
+  defined. (Thanks to Christian Hudon.)
+
+* :class:`DesignInfo` has new attributes
+  :attr:`DesignInfo.factor_infos` and :attr:`DesignInfo.term_codings`
+  which provide detailed metadata about how each factor and term is
+  encoded.
+
+* As a result of the above changes, the split between
+  :class:`DesignInfo` and :class:`DesignMatrixBuilder` is no longer
+  necessary; :class:`DesignMatrixBuiler` has been eliminated. So for
+  example, :func:`design_matrix_builders` now returns a list of
+  :class:`DesignInfo` objects, and you can now pass
+  :class:`DesignInfo` objects directly to any function for building
+  design matrices. For compatibility, :class:`DesignInfo` continues to
+  provide ``.builder`` and ``.design_info`` attributes, so that old
+  code should continue to work; however, these attributes are
+  deprecated.
+
+* Ensured that attempting to pickle most Patsy objects raises an
+  error. This has never been supported, and the interesting cases
+  failed in any case, but now we're taking a more systematic
+  approach. (Soon we will add real, supported pickling support.)
+
+* Fixed a bug when running under ``python -OO``.
+
 v0.3.0
 ------
 
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11444.svg
+   :target: http://dx.doi.org/10.5281/zenodo.11444
+
 * New stateful transforms for computing natural and cylic cubic
   splines with constraints, and tensor spline bases with
-  constraints. (Thanks to `@broessli <https://github.com/broessli>`
+  constraints. (Thanks to `@broessli <https://github.com/broessli>`_
   and GDF Suez for contributing this code.)
 
 * Dropped support for Python 2.5 and earlier.
@@ -42,6 +101,9 @@ v0.3.0
 v0.2.1
 ------
 
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11447.png
+   :target: http://dx.doi.org/10.5281/zenodo.11447
+
 * Fixed a nasty bug in missing value handling where, if missing values
   were present, ``dmatrix(..., result_type="dataframe")`` would always
   crash, and ``dmatrices("y ~ 1")`` would produce left- and right-hand
@@ -56,6 +118,9 @@ v0.2.1
 
 v0.2.0
 ------
+
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11448.png
+   :target: http://dx.doi.org/10.5281/zenodo.11448
 
 Warnings:
 
@@ -89,4 +154,8 @@ Other: miscellaneous doc improvements and bug fixes.
 
 v0.1.0
 ------
-  First public release.
+
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11449.png
+   :target: http://dx.doi.org/10.5281/zenodo.11449
+
+First public release.

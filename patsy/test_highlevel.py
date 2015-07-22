@@ -9,23 +9,25 @@ import __future__
 import numpy as np
 from nose.tools import assert_raises
 from patsy import PatsyError
-from patsy.design_info import DesignMatrix
+from patsy.design_info import DesignMatrix, DesignInfo
 from patsy.eval import EvalEnvironment
 from patsy.desc import ModelDesc, Term, INTERCEPT
 from patsy.categorical import C
 from patsy.contrasts import Helmert
 from patsy.user_util import balanced, LookupFactor
 from patsy.build import (design_matrix_builders,
-                         build_design_matrices,
-                         DesignMatrixBuilder)
+                         build_design_matrices)
 from patsy.highlevel import *
-from patsy.util import have_pandas
+from patsy.util import (have_pandas,
+                        have_pandas_categorical,
+                        have_pandas_categorical_dtype,
+                        pandas_Categorical_from_codes)
 from patsy.origin import Origin
 
 if have_pandas:
     import pandas
 
-def check_result(expect_builders, lhs, rhs, data,
+def check_result(expect_full_designs, lhs, rhs, data,
                  expected_rhs_values, expected_rhs_names,
                  expected_lhs_values, expected_lhs_names): # pragma: no cover
     assert np.allclose(rhs, expected_rhs_values)
@@ -37,20 +39,20 @@ def check_result(expect_builders, lhs, rhs, data,
         assert expected_lhs_values is None
         assert expected_lhs_names is None
     
-    if expect_builders:
+    if expect_full_designs:
         if lhs is None:
-            new_rhs, = build_design_matrices([rhs.design_info.builder], data)
+            new_rhs, = build_design_matrices([rhs.design_info], data)
         else:
-            new_lhs, new_rhs = build_design_matrices([lhs.design_info.builder,
-                                                      rhs.design_info.builder],
+            new_lhs, new_rhs = build_design_matrices([lhs.design_info,
+                                                      rhs.design_info],
                                                      data)
             assert np.allclose(new_lhs, lhs)
             assert new_lhs.design_info.column_names == expected_lhs_names
         assert np.allclose(new_rhs, rhs)
         assert new_rhs.design_info.column_names == expected_rhs_names
     else:
-        assert rhs.design_info.builder is None
-        assert lhs is None or lhs.design_info.builder is None
+        assert rhs.design_info.terms is None
+        assert lhs is None or lhs.design_info.terms is None
 
 def dmatrix_pandas(formula_like, data={}, depth=0, return_type="matrix"):
     return_type = "dataframe"
@@ -65,16 +67,16 @@ def dmatrices_pandas(formula_like, data={}, depth=0, return_type="matrix"):
     return dmatrices(formula_like, data, depth, return_type=return_type)
 
 def t(formula_like, data, depth,
-      expect_builders,
+      expect_full_designs,
       expected_rhs_values, expected_rhs_names,
       expected_lhs_values=None, expected_lhs_names=None): # pragma: no cover
     if isinstance(depth, int):
         depth += 1
     def data_iter_maker():
         return iter([data])
-    if (isinstance(formula_like, (str, ModelDesc, DesignMatrixBuilder))
+    if (isinstance(formula_like, (str, ModelDesc, DesignInfo))
         or (isinstance(formula_like, tuple)
-            and isinstance(formula_like[0], DesignMatrixBuilder))
+            and isinstance(formula_like[0], DesignInfo))
         or hasattr(formula_like, "__patsy_get_model_desc__")):
         if expected_lhs_values is None:
             builder = incr_dbuilder(formula_like, data_iter_maker, depth)
@@ -83,7 +85,7 @@ def t(formula_like, data, depth,
         else:
             builders = incr_dbuilders(formula_like, data_iter_maker, depth)
             lhs, rhs = build_design_matrices(builders, data)
-        check_result(expect_builders, lhs, rhs, data,
+        check_result(expect_full_designs, lhs, rhs, data,
                      expected_rhs_values, expected_rhs_names,
                      expected_lhs_values, expected_lhs_names)
     else:
@@ -99,7 +101,7 @@ def t(formula_like, data, depth,
     if expected_lhs_values is None:
         for f in one_mat_fs:
             rhs = f(formula_like, data, depth)
-            check_result(expect_builders, None, rhs, data,
+            check_result(expect_full_designs, None, rhs, data,
                          expected_rhs_values, expected_rhs_names,
                          expected_lhs_values, expected_lhs_names)
 
@@ -123,7 +125,7 @@ def t(formula_like, data, depth,
 
         for f in two_mat_fs:
             (lhs, rhs) = f(formula_like, data, depth)
-            check_result(expect_builders, lhs, rhs, data,
+            check_result(expect_full_designs, lhs, rhs, data,
                          expected_rhs_values, expected_rhs_names,
                          expected_lhs_values, expected_lhs_names)
 
@@ -279,12 +281,13 @@ def test_formula_likes():
                  [Term([]), Term([LookupFactor("x")])],
                  )
     builders = design_matrix_builders(termlists,
-                                      lambda: iter([{"x": [1, 2, 3]}]))
+                                      lambda: iter([{"x": [1, 2, 3]}]),
+                                      eval_env=0)
     # twople but with no LHS
     t((builders[0], builders[2]), {"x": [10, 20, 30]}, 0,
       True,
       [[1, 10], [1, 20], [1, 30]], ["Intercept", "x"])
-    # single DesignMatrixBuilder
+    # single DesignInfo
     t(builders[2], {"x": [10, 20, 30]}, 0,
       True,
       [[1, 10], [1, 20], [1, 30]], ["Intercept", "x"])
@@ -680,3 +683,63 @@ def test_dmatrix_NA_action():
         assert_raises(PatsyError,
                       dmatrices, "y ~ 1", data=data, return_type=return_type,
                       NA_action="raise")
+
+def test_0d_data():
+    # Use case from statsmodels/statsmodels#1881
+    data_0d = {"x1": 1.1, "x2": 1.2, "a": "a1"}
+
+    for formula, expected in [
+            ("x1 + x2", [[1, 1.1, 1.2]]),
+            ("C(a, levels=('a1', 'a2')) + x1", [[1, 0, 1.1]]),
+            ]:
+        mat = dmatrix(formula, data_0d)
+        assert np.allclose(mat, expected)
+
+        assert np.allclose(build_design_matrices([mat.design_info],
+                                                 data_0d)[0],
+                           expected)
+        if have_pandas:
+            data_series = pandas.Series(data_0d)
+            assert np.allclose(dmatrix(formula, data_series), expected)
+
+            assert np.allclose(build_design_matrices([mat.design_info],
+                                                     data_series)[0],
+                               expected)
+
+def test_env_not_saved_in_builder():
+    x_in_env = [1, 2, 3]
+    design_matrix = dmatrix("x_in_env", {})
+
+    x_in_env = [10, 20, 30]
+    design_matrix2 = dmatrix(design_matrix.design_info, {})
+
+    assert np.allclose(design_matrix, design_matrix2)
+
+def test_C_and_pandas_categorical():
+    if not have_pandas_categorical:
+        return
+
+    objs = [pandas_Categorical_from_codes([1, 0, 1], ["b", "a"])]
+    if have_pandas_categorical_dtype:
+        objs.append(pandas.Series(objs[0]))
+    for obj in objs:
+        d = {"obj": obj}
+        assert np.allclose(dmatrix("obj", d),
+                           [[1, 1],
+                            [1, 0],
+                            [1, 1]])
+
+        assert np.allclose(dmatrix("C(obj)", d),
+                           [[1, 1],
+                            [1, 0],
+                            [1, 1]])
+
+        assert np.allclose(dmatrix("C(obj, levels=['b', 'a'])", d),
+                           [[1, 1],
+                            [1, 0],
+                            [1, 1]])
+
+        assert np.allclose(dmatrix("C(obj, levels=['a', 'b'])", d),
+                           [[1, 0],
+                            [1, 1],
+                            [1, 0]])

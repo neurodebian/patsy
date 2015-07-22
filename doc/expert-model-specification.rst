@@ -78,12 +78,11 @@ things are.)
    from patsy import (ModelDesc, EvalEnvironment, Term, EvalFactor,
                       LookupFactor, demo_data, dmatrix)
    data = demo_data("a", "x")
-   env = EvalEnvironment.capture()
 
    # LookupFactor takes a dictionary key:
    a_lookup = LookupFactor("a")
    # EvalFactor takes arbitrary Python code:
-   x_transform = EvalFactor("np.log(x ** 2)", env)
+   x_transform = EvalFactor("np.log(x ** 2)")
    # First argument is empty list for dmatrix; we would need to put
    # something there if we were calling dmatrices.
    desc = ModelDesc([],
@@ -157,7 +156,7 @@ The full interface looks like this:
        :term:`hashable`. These methods will determine which factors
        Patsy considers equal for purposes of redundancy elimination.
 
-    .. method:: memorize_passes_needed(state)
+    .. method:: memorize_passes_needed(state, eval_env)
 
        Return the number of passes through the data that this factor
        will need in order to set up any :ref:`stateful-transforms`.
@@ -170,6 +169,9 @@ The full interface looks like this:
        builder machinery, and that we can do whatever we like with. It
        will be passed back in to all memorization and evaluation
        methods.
+
+       `eval_env` is an :class:`EvalEnvironment` object, describing
+       the Python environment where the factor is being evaluated.
 
     .. method:: memorize_chunk(state, which_pass, data)
 
@@ -194,6 +196,14 @@ The full interface looks like this:
        Evaluate this factor on the given `data`. Return value should
        ideally be a 1-d or 2-d array or :func:`Categorical` object,
        but this will be checked and converted as needed.
+
+In addition, factor objects should be pickleable/unpickleable, so as
+to allow models containing them to be pickled/unpickled. (Or, if for
+some reason your factor objects are *not* safely pickleable, you
+should consider giving them a `__getstate__` method which raises an
+error, so that any users which attempt to pickle a model containing
+your factors will get a clear failure immediately, instead of only
+later when they try to unpickle.)
 
 .. warning:: Do not store evaluation-related state in
    attributes of your factor object! The same factor object may

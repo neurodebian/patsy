@@ -9,7 +9,8 @@ __all__ = ["cr", "cc", "te"]
 
 import numpy as np
 
-from patsy.util import have_pandas, atleast_2d_column_default
+from patsy.util import (have_pandas, atleast_2d_column_default,
+                        no_pickling, assert_no_pickling)
 from patsy.state import stateful_transform
 
 if have_pandas:
@@ -684,6 +685,8 @@ class CubicRegressionSpline(object):
                 dm.index = x_orig.index
         return dm
 
+    __getstate__ = no_pickling
+
 
 class CR(CubicRegressionSpline):
     """cr(x, df=None, knots=None, lower_bound=None, upper_bound=None, constraints=None)
@@ -705,7 +708,10 @@ class CR(CubicRegressionSpline):
       as implemented in the R package 'mgcv' (GAM modelling).
 
     """
-    __doc__ += CubicRegressionSpline.common_doc
+
+    # Under python -OO, __doc__ will be defined but set to None
+    if __doc__:
+        __doc__ += CubicRegressionSpline.common_doc
 
     def __init__(self):
         CubicRegressionSpline.__init__(self, name='cr', cyclic=False)
@@ -732,7 +738,10 @@ class CC(CubicRegressionSpline):
       as implemented in the R package 'mgcv' (GAM modelling).
 
     """
-    __doc__ += CubicRegressionSpline.common_doc
+
+    # Under python -OO, __doc__ will be defined but set to None
+    if __doc__:
+        __doc__ += CubicRegressionSpline.common_doc
 
     def __init__(self):
         CubicRegressionSpline.__init__(self, name='cc', cyclic=True)
@@ -809,6 +818,7 @@ def test_crs_compat():
         start_idx = stop_idx + 1
     assert tests_ran == R_crs_num_tests
 
+test_crs_compat.slow = True
 
 def test_crs_with_specific_constraint():
     from patsy.highlevel import incr_dbuilder, build_design_matrices, dmatrix
@@ -929,6 +939,8 @@ class TE(object):
             args_2d.append(arg)
 
         return _get_te_dmatrix(args_2d, self._constraints)
+
+    __getstate__ = no_pickling
 
 te = stateful_transform(TE)
 
