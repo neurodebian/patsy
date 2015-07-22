@@ -25,7 +25,7 @@
 @@ -20,6 +19,7 @@ from patsy.build import *
  from patsy.categorical import C
  from patsy.user_util import balanced, LookupFactor
- from patsy.design_info import DesignMatrix
+ from patsy.design_info import DesignMatrix, DesignInfo
 +from patsy.compat import six
  
  if have_pandas:
