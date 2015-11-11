@@ -18,14 +18,16 @@ before_install:
   # Escape Travis virtualenv
   - deactivate
   # See: http://conda.pydata.org/docs/travis.html
-  - wget http://repo.continuum.io/miniconda/Miniconda3-3.6.0-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy scipy coverage nose pip
+  # Should remove the numpy/scipy rules here ASAP, as soon as
+  # numpy 1.10.2 and scipy 0.16.1 are in conda.
+  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy==1.9.2 scipy==0.15.1 coverage nose pip
   - source activate testenv
   - conda install pandas${PANDAS_VERSION_STR}
 install:
@@ -41,7 +43,7 @@ script:
   # The --exe is because python sometimes marks all installed modules
   # as executable, so without --exe nosetests will just ignore
   # everything. Baffling, but so it goes.
-  - coverage run --source=$INSTALLDIR --rcfile=../.coveragerc $(which nosetests) --exe --failure-detail --all-modules $INSTALLDIR
+  - coverage run --source=$INSTALLDIR --rcfile=../.coveragerc $(which nosetests) -vvv --exe --failure-detail --all-modules $INSTALLDIR
   - coverage report --rcfile=../.coveragerc --show-missing
   - python ../tools/check-API-refs.py
 notifications:

@@ -3,8 +3,32 @@ Changes
 
 .. currentmodule:: patsy
 
+v0.4.1
+------
+
+New features:
+
+* On Python 2, accept ``unicode`` strings containing only ASCII
+  characters as valid formula descriptions in
+  the high-level formula API (:func:`dmatrix` and friends). This is
+  intended as a convenience for people using Python 2 with ``from
+  __future__ import unicode_literals``. (See :ref:`py2-versus-py3`.)
+
+Bug fixes:
+
+* Accept ``long`` as a valid integer type in the new
+  :class:`DesignInfo` classes. In particular this fixes errors that
+  arise on 64-bit Windows builds (where ``ndarray.shape`` contains
+  ``long`` objects), like ``ValueError: For numerical factors,
+  num_columns must be an int.``
+
+* Fix deprecation warnings encountered with numpy 1.10
+
 v0.4.0
 ------
+
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.20981.svg
+   :target: http://dx.doi.org/10.5281/zenodo.20981
 
 Incompatible changes:
 
