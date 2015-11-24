@@ -1,5 +1,5 @@
-Tests: unittests
+Tests: nosetests2
 Depends: python-all, python-nose, python-numpy, python-patsy, python-openpyxl, python-six
 
-Tests: unittests3
+Tests: nosetests3
 Depends: python3-all, python3-nose, python3-numpy, python3-patsy, python3-six
