@@ -1,6 +1,6 @@
 --- a/patsy/compat.py
 +++ b/patsy/compat.py
-@@ -129,3 +129,11 @@ def call_and_wrap_exc(msg, origin, f, *a
+@@ -48,3 +48,11 @@ def call_and_wrap_exc(msg, origin, f, *a
              if isinstance(e, PatsyError):
                  e.set_origin(origin)
              raise
