@@ -166,6 +166,8 @@ def test_redundancy_thoroughly():
                  [("a", "b", "x2"), ("a", "b", "x1")],
                  [("b", "x1", "x2"), ("a", "x1", "x2")]]
     count = 0
+    import time
+    start = time.time()
     for termlist_template in all_termlist_templates:
         termlist_set = set(termlist_template)
         for dispreferred, preferred in redundant:
@@ -189,7 +191,9 @@ def test_redundancy_thoroughly():
             else:
                 make_matrix(data, expected_rank, termlist_template)
             count += 1
-    print(count)
+            if count % 100 == 0:
+                print("Completed:", count)
+    print("Took %0.2f seconds" % (time.time() - start,))
 
 test_redundancy_thoroughly.slow = 1
 
@@ -425,7 +429,7 @@ def test_return_type_pandas():
                                       return_type="dataframe")
     assert isinstance(int_df, pandas.DataFrame)
     assert np.array_equal(int_df, [[1], [1], [1]])
-    assert int_df.index.equals([10, 20, 30])
+    assert int_df.index.equals(pandas.Index([10, 20, 30]))
 
     import patsy.build
     had_pandas = patsy.build.have_pandas
@@ -444,7 +448,7 @@ def test_return_type_pandas():
                                                    dtype=object)},
                                   NA_action="drop",
                                   return_type="dataframe")
-    assert x_df.index.equals([2])
+    assert x_df.index.equals(pandas.Index([2]))
 
 def test_data_mismatch():
     test_cases_twoway = [
@@ -576,7 +580,7 @@ def test_categorical():
     data_categ = {"a": C(["a2", "a1", "a2"])}
     datas = [data_strings, data_categ]
     if have_pandas_categorical:
-        data_pandas = {"a": pandas.Categorical.from_array(["a1", "a2", "a2"])}
+        data_pandas = {"a": pandas.Categorical(["a1", "a2", "a2"])}
         datas.append(data_pandas)
     def t(data1, data2):
         def iter_maker():

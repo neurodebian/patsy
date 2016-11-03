@@ -40,9 +40,20 @@ else:
 # Can drop this guard whenever we drop support for such older versions of
 # pandas.
 have_pandas_categorical = (have_pandas and hasattr(pandas, "Categorical"))
-have_pandas_categorical_dtype = (have_pandas
-                                  and hasattr(pandas.core.common,
-                                              "is_categorical_dtype"))
+if not have_pandas:
+    have_pandas_categorical_dtype = False
+    _pandas_is_categorical_dtype = None
+else:
+    if hasattr(pandas, "api"):
+        # This is available starting in pandas v0.19.0
+        have_pandas_categorical_dtype = True
+        _pandas_is_categorical_dtype = pandas.api.types.is_categorical_dtype
+    else:
+        # This is needed for pandas v0.18.0 and earlier
+        _pandas_is_categorical_dtype = getattr(pandas.core.common,
+                                               "is_categorical_dtype", None)
+        have_pandas_categorical_dtype = (_pandas_is_categorical_dtype
+                                         is not None)
 
 # Passes through Series and DataFrames, call np.asarray() on everything else
 def asarray_or_pandas(a, copy=False, dtype=None, subok=False):
@@ -595,6 +606,8 @@ def pandas_Categorical_from_codes(codes, categories):
         return pandas.Categorical(codes, categories)
 
 def test_pandas_Categorical_from_codes():
+    if not have_pandas_categorical:
+        return
     c = pandas_Categorical_from_codes([1, 1, 0, -1], ["a", "b"])
     assert np.all(np.asarray(c)[:-1] == ["b", "b", "a"])
     assert np.isnan(np.asarray(c)[-1])
@@ -624,6 +637,8 @@ def pandas_Categorical_codes(cat):
         return cat.labels
 
 def test_pandas_Categorical_accessors():
+    if not have_pandas_categorical:
+        return
     c = pandas_Categorical_from_codes([1, 1, 0, -1], ["a", "b"])
     assert np.all(pandas_Categorical_categories(c) == ["a", "b"])
     assert np.all(pandas_Categorical_codes(c) == [1, 1, 0, -1])
@@ -637,10 +652,7 @@ def test_pandas_Categorical_accessors():
 def safe_is_pandas_categorical_dtype(dt):
     if not have_pandas_categorical_dtype:
         return False
-    # WTF this incredibly crucial function is not even publically exported.
-    # Also if you read its source it uses a bare except: block which is broken
-    # by definition, but oh well there is not much I can do about this.
-    return pandas.core.common.is_categorical_dtype(dt)
+    return _pandas_is_categorical_dtype(dt)
 
 # Needed to support pandas >= 0.15 (!)
 def safe_is_pandas_categorical(data):
@@ -656,7 +668,7 @@ def test_safe_is_pandas_categorical():
     assert not safe_is_pandas_categorical(np.arange(10))
 
     if have_pandas_categorical:
-        c_obj = pandas.Categorical.from_array(["a", "b"])
+        c_obj = pandas.Categorical(["a", "b"])
         assert safe_is_pandas_categorical(c_obj)
 
     if have_pandas_categorical_dtype:

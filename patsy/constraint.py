@@ -10,6 +10,7 @@ from __future__ import print_function
 __all__ = ["LinearConstraint"]
 
 import re
+from collections import Mapping
 import six
 import numpy as np
 from patsy import PatsyError
@@ -19,7 +20,6 @@ from patsy.util import (atleast_2d_column_default,
                         SortAnythingKey,
                         no_pickling, assert_no_pickling)
 from patsy.infix_parser import Token, Operator, ParseNode, infix_parse
-from patsy.compat import Scanner, Mapping
 
 class LinearConstraint(object):
     """A linear constraint in matrix form.
@@ -58,8 +58,6 @@ class LinearConstraint(object):
             raise ValueError("must have at least one row in constraint matrix")
         if self.coefs.shape[0] != self.constants.shape[0]:
             raise ValueError("shape mismatch between coefs and constants")
-        if np.any(np.all(self.coefs == 0, axis=1)):
-            raise ValueError("can't test a constant constraint")
 
     __repr__ = repr_pretty_delegate
     def _repr_pretty_(self, p, cycle):
@@ -102,12 +100,19 @@ def test_LinearConstraint():
     assert lc.coefs.dtype == np.dtype(float)
     assert lc.constants.dtype == np.dtype(float)
 
+
+    # statsmodels wants to be able to create degenerate constraints like this,
+    # see:
+    #     https://github.com/pydata/patsy/issues/89
+    # We used to forbid it, but I guess it's harmless, so why not.
+    lc = LinearConstraint(["a"], [[0]])
+    assert_equal(lc.coefs, [[0]])
+
     from nose.tools import assert_raises
     assert_raises(ValueError, LinearConstraint, ["a"], [[1, 2]])
     assert_raises(ValueError, LinearConstraint, ["a"], [[[1]]])
     assert_raises(ValueError, LinearConstraint, ["a"], [[1, 2]], [3, 4])
     assert_raises(ValueError, LinearConstraint, ["a", "b"], [[1, 2]], [3, 4])
-    assert_raises(ValueError, LinearConstraint, ["a"], [[0]])
     assert_raises(ValueError, LinearConstraint, ["a"], [[1]], [[]])
     assert_raises(ValueError, LinearConstraint, ["a", "b"], [])
     assert_raises(ValueError, LinearConstraint, ["a", "b"],
@@ -176,7 +181,7 @@ def _tokenize_constraint(string, variable_names):
         (whitespace_re, None),
         ]
 
-    scanner = Scanner(lexicon)
+    scanner = re.Scanner(lexicon)
     tokens, leftover = scanner.scan(string)
     if leftover:
         offset = len(string) - len(leftover)

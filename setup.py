@@ -21,7 +21,12 @@ setup(
     license="2-clause BSD",
     packages=["patsy"],
     url="https://github.com/pydata/patsy",
-    install_requires=["six", "numpy"],
+    install_requires=[
+        "six",
+        # Possibly we need an even newer numpy than this, but we definitely
+        # need at least 1.4 for triu_indices
+        "numpy >= 1.4",
+    ],
     classifiers =
       [ "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -29,12 +34,10 @@ setup(
         "Intended Audience :: Financial and Insurance Industry",
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.2",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
         "Topic :: Scientific/Engineering",
         ],
 )

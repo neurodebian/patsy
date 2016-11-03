@@ -3,8 +3,16 @@ Changes
 
 .. currentmodule:: patsy
 
+v0.5.0 (not yet released)
+------
+
+* Dropped support for Python 2.6 and 3.3.
+
 v0.4.1
 ------
+
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.33471.svg
+   :target: http://dx.doi.org/10.5281/zenodo.33471
 
 New features:
 
