@@ -1,3 +1,9 @@
+patsy (0.4.1+git34-ga5b54c2-1) unstable; urgency=medium
+
+  * New upstream snapshot from v0.4.1-34-ga5b54c2
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Thu, 03 Nov 2016 11:08:07 -0400
+
 patsy (0.4.1-2) unstable; urgency=medium
 
   * debian/tests - refactored into reusable across packages/versions of python
