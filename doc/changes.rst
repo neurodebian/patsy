@@ -3,16 +3,24 @@ Changes
 
 .. currentmodule:: patsy
 
-v0.5.0 (not yet released)
+v0.5.0
 ------
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1211053.svg
+   :target: https://doi.org/10.5281/zenodo.1211053
+
 * Dropped support for Python 2.6 and 3.3.
+* Update to keep up with ``pandas`` API changes
+* More consistent handling of degenerate linear constraints in
+  :meth:`DesignInfo.linear_constraint` (`#89
+  <https://github.com/pydata/patsy/issues/89>`__)
+* Fix a crash in ``DesignMatrix.__repr__`` when ``shape[0] == 0``
 
 v0.4.1
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.33471.svg
-   :target: http://dx.doi.org/10.5281/zenodo.33471
+   :target: https://doi.org/10.5281/zenodo.33471
 
 New features:
 
@@ -36,7 +44,7 @@ v0.4.0
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.20981.svg
-   :target: http://dx.doi.org/10.5281/zenodo.20981
+   :target: https://doi.org/10.5281/zenodo.20981
 
 Incompatible changes:
 
@@ -95,7 +103,7 @@ v0.3.0
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11444.svg
-   :target: http://dx.doi.org/10.5281/zenodo.11444
+   :target: https://doi.org/10.5281/zenodo.11444
 
 * New stateful transforms for computing natural and cylic cubic
   splines with constraints, and tensor spline bases with
@@ -134,7 +142,7 @@ v0.2.1
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11447.png
-   :target: http://dx.doi.org/10.5281/zenodo.11447
+   :target: https://doi.org/10.5281/zenodo.11447
 
 * Fixed a nasty bug in missing value handling where, if missing values
   were present, ``dmatrix(..., result_type="dataframe")`` would always
@@ -152,7 +160,7 @@ v0.2.0
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11448.png
-   :target: http://dx.doi.org/10.5281/zenodo.11448
+   :target: https://doi.org/10.5281/zenodo.11448
 
 Warnings:
 
@@ -188,6 +196,6 @@ v0.1.0
 ------
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11449.png
-   :target: http://dx.doi.org/10.5281/zenodo.11449
+   :target: https://doi.org/10.5281/zenodo.11449
 
 First public release.
